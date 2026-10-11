@@ -145,3 +145,61 @@ describe("LoginForm 필수 입력 검증", () => {
     expect(loginMock).not.toHaveBeenCalled();
   });
 });
+
+describe("LoginForm 제출", () => {
+  it("아이디는 앞뒤 공백을 제거하고 비밀번호는 그대로 로그인 요청에 담는다", async () => {
+    loginMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "  admin  ");
+    await user.type(screen.getByLabelText("비밀번호"), " secret ");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+    expect(loginMock).toHaveBeenCalledWith({
+      loginId: "admin",
+      password: " secret ",
+      rememberMe: false,
+    });
+  });
+
+  it("로그인 상태 유지를 선택하면 rememberMe를 true로 보낸다", async () => {
+    loginMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("checkbox", { name: "로그인 상태 유지" }));
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(loginMock).toHaveBeenCalledWith(expect.objectContaining({ rememberMe: true }));
+  });
+
+  it("요청 중에는 버튼에 로그인 중...을 표시하고 비활성화한다", async () => {
+    loginMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.getByRole("button", { name: "로그인 중..." })).toBeDisabled();
+  });
+
+  it("요청 중에는 다시 제출해도 로그인 요청을 한 번만 보낸다", async () => {
+    loginMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+    await user.click(screen.getByRole("button", { name: "로그인 중..." }));
+    await user.type(screen.getByLabelText("비밀번호"), "{Enter}");
+
+    expect(loginMock).toHaveBeenCalledTimes(1);
+  });
+});

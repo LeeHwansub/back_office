@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { login } from "./api";
 
 const inputClassName =
   "h-11 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-[invalid=true]:border-red-600";
@@ -17,15 +18,23 @@ const NO_INVALID_FIELDS: InvalidFields = { loginId: false, password: false };
 export function LoginForm() {
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [invalid, setInvalid] = useState<InvalidFields>(NO_INVALID_FIELDS);
   const [showRequiredBoth, setShowRequiredBoth] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
 
-    const nextInvalid = { loginId: loginId.trim() === "", password: password === "" };
+    const trimmedLoginId = loginId.trim();
+    const nextInvalid = { loginId: trimmedLoginId === "", password: password === "" };
     setInvalid(nextInvalid);
     setShowRequiredBoth(nextInvalid.loginId && nextInvalid.password);
+    if (nextInvalid.loginId || nextInvalid.password) return;
+
+    setIsSubmitting(true);
+    await login({ loginId: trimmedLoginId, password, rememberMe });
   }
 
   function handleLoginIdChange(value: string) {
@@ -97,7 +106,13 @@ export function LoginForm() {
 
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-gray-700">
-          <input type="checkbox" name="rememberMe" className="h-4 w-4 rounded border-gray-300" />
+          <input
+            type="checkbox"
+            name="rememberMe"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
           로그인 상태 유지
         </label>
         <Link href="/forgot-password" className="text-blue-700 hover:underline">
@@ -107,9 +122,10 @@ export function LoginForm() {
 
       <button
         type="submit"
+        disabled={isSubmitting}
         className="h-11 rounded-md bg-blue-700 text-sm font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-400"
       >
-        로그인
+        {isSubmitting ? "로그인 중..." : "로그인"}
       </button>
     </form>
   );
