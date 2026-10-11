@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { DEFAULT_WEB_URL } from '../app.setup';
+import { AppException } from '../common/errors/app.exception';
+import { ErrorCode } from '../common/errors/error-code';
 import { PasswordResetMailer } from '../mail/password-reset-mailer';
 import { PrismaService } from '../prisma/prisma.service';
+import { PasswordHasher } from './password-hasher';
 import { generateSessionToken, hashSessionToken } from './session-token';
 
 const RESET_TOKEN_TTL_MINUTES = 30;
@@ -12,6 +15,18 @@ export type PasswordResetRequestInput = {
   email: string;
 };
 
+export type PasswordResetConfirmInput = {
+  token: string;
+  newPassword: string;
+};
+
+function invalidResetToken(): AppException {
+  return new AppException(
+    HttpStatus.BAD_REQUEST,
+    ErrorCode.INVALID_RESET_TOKEN,
+  );
+}
+
 @Injectable()
 export class PasswordResetService {
   private readonly logger = new Logger(PasswordResetService.name);
@@ -19,7 +34,47 @@ export class PasswordResetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailer: PasswordResetMailer,
+    private readonly passwordHasher: PasswordHasher,
   ) {}
+
+  async confirm({
+    token,
+    newPassword,
+  }: PasswordResetConfirmInput): Promise<void> {
+    const now = new Date();
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: hashSessionToken(token) },
+      include: { user: true },
+    });
+    if (
+      !resetToken ||
+      resetToken.usedAt ||
+      resetToken.expiresAt <= now ||
+      !RESETTABLE_STATUSES.includes(resetToken.user.status)
+    ) {
+      throw invalidResetToken();
+    }
+
+    const passwordHash = await this.passwordHasher.hash(newPassword);
+    const { userId } = resetToken;
+    await this.prisma.$transaction(async (tx) => {
+      // 동시에 들어온 같은 토큰 요청 중 하나만 사용 처리에 성공한다.
+      const { count } = await tx.passwordResetToken.updateMany({
+        where: { id: resetToken.id, usedAt: null },
+        data: { usedAt: now },
+      });
+      if (count === 0) throw invalidResetToken();
+
+      await tx.adminUser.update({
+        where: { id: userId },
+        data: { passwordHash, status: 'ACTIVE' },
+      });
+      await tx.passwordResetToken.deleteMany({
+        where: { userId, usedAt: null },
+      });
+      await tx.adminSession.deleteMany({ where: { userId } });
+    });
+  }
 
   async request({ loginId, email }: PasswordResetRequestInput): Promise<void> {
     const user = await this.prisma.adminUser.findUnique({

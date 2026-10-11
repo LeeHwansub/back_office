@@ -9,6 +9,7 @@ import {
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
 import { PasswordResetService } from './password-reset.service';
 
@@ -51,6 +52,17 @@ export class AuthController {
     await this.passwordResetService.request({
       loginId: body.loginId,
       email: body.email,
+    });
+  }
+
+  @Post('password-reset/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmPasswordReset(
+    @Body() body: PasswordResetConfirmDto,
+  ): Promise<void> {
+    await this.passwordResetService.confirm({
+      token: body.token,
+      newPassword: body.newPassword,
     });
   }
 }

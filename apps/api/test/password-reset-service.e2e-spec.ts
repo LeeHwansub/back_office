@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { PasswordHasher } from '../src/auth/password-hasher';
 import { PasswordResetService } from '../src/auth/password-reset.service';
 import { hashSessionToken } from '../src/auth/session-token';
 import {
@@ -29,6 +30,7 @@ describe('PasswordResetService.request (e2e)', () => {
       imports: [PrismaModule],
       providers: [
         PasswordResetService,
+        PasswordHasher,
         { provide: PasswordResetMailer, useValue: { send } },
       ],
     }).compile();

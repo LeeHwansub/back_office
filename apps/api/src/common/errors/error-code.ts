@@ -10,6 +10,7 @@ export const ErrorCode = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
