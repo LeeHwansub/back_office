@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
 
-const DEFAULT_WEB_URL = 'http://localhost:3000';
+export const DEFAULT_WEB_URL = 'http://localhost:3000';
 
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api/v1');
