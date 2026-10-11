@@ -20,6 +20,13 @@ export const ErrorCode = {
   REQUIRED_EMAIL: "REQUIRED_EMAIL",
   INVALID_EMAIL_FORMAT: "INVALID_EMAIL_FORMAT",
   PASSWORD_RESET_FAILED: "PASSWORD_RESET_FAILED",
+
+  REQUIRED_NEW_PASSWORD_AND_CONFIRM: "REQUIRED_NEW_PASSWORD_AND_CONFIRM",
+  REQUIRED_NEW_PASSWORD: "REQUIRED_NEW_PASSWORD",
+  REQUIRED_PASSWORD_CONFIRM: "REQUIRED_PASSWORD_CONFIRM",
+  INVALID_PASSWORD_POLICY: "INVALID_PASSWORD_POLICY",
+  PASSWORD_CONFIRM_MISMATCH: "PASSWORD_CONFIRM_MISMATCH",
+  INVALID_RESET_TOKEN: "INVALID_RESET_TOKEN",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -46,4 +53,12 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   REQUIRED_EMAIL: "이메일을 입력해 주세요.",
   INVALID_EMAIL_FORMAT: "올바른 이메일 주소를 입력해 주세요.",
   PASSWORD_RESET_FAILED: "비밀번호 재설정 요청을 처리할 수 없습니다. 입력 정보를 확인해 주세요.",
+
+  REQUIRED_NEW_PASSWORD_AND_CONFIRM: "새 비밀번호와 비밀번호 확인을 모두 입력해 주세요.",
+  REQUIRED_NEW_PASSWORD: "새 비밀번호를 입력해 주세요.",
+  REQUIRED_PASSWORD_CONFIRM: "비밀번호 확인을 입력해 주세요.",
+  INVALID_PASSWORD_POLICY: "비밀번호는 영문과 숫자를 포함해 8~200자로 입력해 주세요.",
+  PASSWORD_CONFIRM_MISMATCH: "비밀번호가 일치하지 않습니다.",
+  INVALID_RESET_TOKEN:
+    "재설정 링크가 만료되었거나 이미 사용되었습니다. 비밀번호 찾기를 다시 진행해 주세요.",
 };

@@ -53,6 +53,25 @@ describe("ERROR_MESSAGES", () => {
     );
   });
 
+  it("새 비밀번호 설정 문구를 제공한다", () => {
+    expect(ERROR_MESSAGES[ErrorCode.REQUIRED_NEW_PASSWORD_AND_CONFIRM]).toBe(
+      "새 비밀번호와 비밀번호 확인을 모두 입력해 주세요.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.REQUIRED_NEW_PASSWORD]).toBe("새 비밀번호를 입력해 주세요.");
+    expect(ERROR_MESSAGES[ErrorCode.REQUIRED_PASSWORD_CONFIRM]).toBe(
+      "비밀번호 확인을 입력해 주세요.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.INVALID_PASSWORD_POLICY]).toBe(
+      "비밀번호는 영문과 숫자를 포함해 8~200자로 입력해 주세요.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.PASSWORD_CONFIRM_MISMATCH]).toBe(
+      "비밀번호가 일치하지 않습니다.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.INVALID_RESET_TOKEN]).toBe(
+      "재설정 링크가 만료되었거나 이미 사용되었습니다. 비밀번호 찾기를 다시 진행해 주세요.",
+    );
+  });
+
   it("공통 HTTP 오류 문구를 제공한다", () => {
     expect(ERROR_MESSAGES[ErrorCode.BAD_REQUEST]).toBe("입력한 정보를 확인해 주세요.");
     expect(ERROR_MESSAGES[ErrorCode.UNAUTHORIZED]).toBe(
