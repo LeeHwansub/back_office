@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { login } from "./api";
+import { login, LoginError } from "./api";
+import { getLoginErrorMessage } from "./login-error-messages";
 
 const inputClassName =
   "h-11 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-[invalid=true]:border-red-600";
@@ -22,11 +23,13 @@ export function LoginForm() {
   const [invalid, setInvalid] = useState<InvalidFields>(NO_INVALID_FIELDS);
   const [showRequiredBoth, setShowRequiredBoth] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) return;
 
+    setSubmitError(null);
     const trimmedLoginId = loginId.trim();
     const nextInvalid = { loginId: trimmedLoginId === "", password: password === "" };
     setInvalid(nextInvalid);
@@ -34,7 +37,13 @@ export function LoginForm() {
     if (nextInvalid.loginId || nextInvalid.password) return;
 
     setIsSubmitting(true);
-    await login({ loginId: trimmedLoginId, password, rememberMe });
+    try {
+      await login({ loginId: trimmedLoginId, password, rememberMe });
+    } catch (error) {
+      setSubmitError(error instanceof LoginError ? error.message : getLoginErrorMessage(null));
+      setPassword("");
+      setIsSubmitting(false);
+    }
   }
 
   function handleLoginIdChange(value: string) {
@@ -54,6 +63,12 @@ export function LoginForm() {
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {submitError && (
+        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {submitError}
+        </p>
+      )}
+
       {showRequiredBoth && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {REQUIRED_BOTH_MESSAGE}

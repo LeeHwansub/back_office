@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { login } from "./api";
+import { login, LoginError } from "./api";
 import { LoginForm } from "./LoginForm";
 
 vi.mock("./api", async (importOriginal) => {
@@ -201,5 +201,75 @@ describe("LoginForm 제출", () => {
     await user.type(screen.getByLabelText("비밀번호"), "{Enter}");
 
     expect(loginMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("LoginForm 로그인 실패", () => {
+  async function submitValidForm(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("비밀번호"), "wrong-password");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+  }
+
+  it("LoginError의 안내 문구를 alert로 표시한다", async () => {
+    loginMock.mockRejectedValue(new LoginError(401));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "아이디 또는 비밀번호를 확인해 주세요.",
+    );
+  });
+
+  it("알 수 없는 오류는 내부 내용 대신 로그인 서버 오류 안내를 표시한다", async () => {
+    loginMock.mockRejectedValue(new Error("internal detail"));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    );
+    expect(alert).not.toHaveTextContent("internal detail");
+  });
+
+  it("실패하면 비밀번호는 비우고 아이디는 유지한다", async () => {
+    loginMock.mockRejectedValue(new LoginError(401));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+
+    expect(screen.getByLabelText("아이디")).toHaveValue("admin");
+    expect(screen.getByLabelText("비밀번호")).toHaveValue("");
+  });
+
+  it("실패하면 로그인 버튼을 다시 활성화한다", async () => {
+    loginMock.mockRejectedValue(new LoginError(401));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+
+    expect(screen.getByRole("button", { name: "로그인" })).toBeEnabled();
+  });
+
+  it("다시 제출하면 이전 실패 안내를 지운다", async () => {
+    loginMock.mockRejectedValueOnce(new LoginError(401)).mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
