@@ -18,6 +18,12 @@ type FieldErrors = { loginId: ErrorCode | null; email: ErrorCode | null };
 
 const NO_FIELD_ERRORS: FieldErrors = { loginId: null, email: null };
 
+const backToLoginLink = (
+  <Link href="/login" className="self-start text-[13px] text-[#666] underline">
+    <span aria-hidden="true">← </span>로그인으로 돌아가기
+  </Link>
+);
+
 function validate(loginId: string, email: string): FieldErrors {
   return {
     loginId: loginId === "" ? ErrorCode.REQUIRED_LOGIN_ID : null,
@@ -37,6 +43,7 @@ export function ForgotPasswordForm() {
   const [showRequiredBoth, setShowRequiredBoth] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSent, setIsSent] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,7 +68,10 @@ export function ForgotPasswordForm() {
         error instanceof PasswordResetError ? error.message : ERROR_MESSAGES[ErrorCode.SERVER_ERROR],
       );
       setIsSubmitting(false);
+      return;
     }
+
+    setIsSent(true);
   }
 
   function handleLoginIdChange(value: string) {
@@ -82,6 +92,20 @@ export function ForgotPasswordForm() {
   const validationMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
   const errorMessage = submitError ?? validationMessage;
   const errorDescribedBy = validationMessage ? ERROR_MESSAGE_ID : undefined;
+
+  if (isSent) {
+    return (
+      <div className="flex flex-col gap-5">
+        <p
+          role="status"
+          className="rounded border border-[#d9d9d9] bg-[#f7f7f7] p-3 text-sm text-[#404040]"
+        >
+          비밀번호 재설정 링크를 이메일로 보냈습니다.
+        </p>
+        {backToLoginLink}
+      </div>
+    );
+  }
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -139,9 +163,7 @@ export function ForgotPasswordForm() {
         {isSubmitting ? "요청 중..." : "재설정 링크 받기"}
       </button>
 
-      <Link href="/login" className="self-start text-[13px] text-[#666] underline">
-        <span aria-hidden="true">← </span>로그인으로 돌아가기
-      </Link>
+      {backToLoginLink}
     </form>
   );
 }

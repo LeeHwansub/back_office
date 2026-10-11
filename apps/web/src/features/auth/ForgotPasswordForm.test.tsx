@@ -293,3 +293,60 @@ describe("ForgotPasswordForm 요청 실패", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+describe("ForgotPasswordForm 요청 성공", () => {
+  async function submitValidForm(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("이메일"), "admin@example.com");
+    await user.click(submitButton());
+  }
+
+  it("성공하면 재설정 링크 발송 안내를 status로 표시한다", async () => {
+    requestPasswordResetMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "비밀번호 재설정 링크를 이메일로 보냈습니다.",
+    );
+  });
+
+  it("성공하면 입력란과 재설정 링크 받기 버튼을 숨긴다", async () => {
+    requestPasswordResetMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("status");
+
+    expect(screen.queryByLabelText("아이디")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("이메일")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("성공 후에도 로그인으로 돌아가기 링크를 표시한다", async () => {
+    requestPasswordResetMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("status");
+
+    expect(screen.getByRole("link", { name: "로그인으로 돌아가기" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+  });
+
+  it("요청이 끝나기 전에는 성공 안내를 표시하지 않는다", async () => {
+    requestPasswordResetMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
