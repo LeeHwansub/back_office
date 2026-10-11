@@ -40,6 +40,19 @@ describe("ERROR_MESSAGES", () => {
     );
   });
 
+  it("비밀번호 찾기 문구를 제공한다", () => {
+    expect(ERROR_MESSAGES[ErrorCode.REQUIRED_LOGIN_ID_AND_EMAIL]).toBe(
+      "아이디와 이메일을 모두 입력해 주세요.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.REQUIRED_EMAIL]).toBe("이메일을 입력해 주세요.");
+    expect(ERROR_MESSAGES[ErrorCode.INVALID_EMAIL_FORMAT]).toBe(
+      "올바른 이메일 주소를 입력해 주세요.",
+    );
+    expect(ERROR_MESSAGES[ErrorCode.PASSWORD_RESET_FAILED]).toBe(
+      "비밀번호 재설정 요청을 처리할 수 없습니다. 입력 정보를 확인해 주세요.",
+    );
+  });
+
   it("공통 HTTP 오류 문구를 제공한다", () => {
     expect(ERROR_MESSAGES[ErrorCode.BAD_REQUEST]).toBe("입력한 정보를 확인해 주세요.");
     expect(ERROR_MESSAGES[ErrorCode.UNAUTHORIZED]).toBe(
