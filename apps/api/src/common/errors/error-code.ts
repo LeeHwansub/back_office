@@ -1,0 +1,14 @@
+export const ErrorCode = {
+  BAD_REQUEST: 'BAD_REQUEST',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+  UNPROCESSABLE: 'UNPROCESSABLE',
+  TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
+  SERVER_ERROR: 'SERVER_ERROR',
+} as const;
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+export type ErrorResponseBody = { code: ErrorCode };
