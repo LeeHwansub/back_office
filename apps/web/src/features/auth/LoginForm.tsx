@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { ERROR_MESSAGES, ErrorCode } from "@/lib/error-messages";
 import { login, LoginError } from "./api";
 import { getLoginErrorMessage } from "./login-error-messages";
 
@@ -11,9 +12,6 @@ const inputClassName =
 
 const labelClassName = "text-[13px] font-medium text-[#404040]";
 
-const REQUIRED_BOTH_MESSAGE = "아이디와 비밀번호를 모두 입력해 주세요.";
-const REQUIRED_LOGIN_ID_MESSAGE = "아이디를 입력해 주세요.";
-const REQUIRED_PASSWORD_MESSAGE = "비밀번호를 입력해 주세요.";
 const ERROR_MESSAGE_ID = "login-error";
 
 type InvalidFields = { loginId: boolean; password: boolean };
@@ -66,14 +64,15 @@ export function LoginForm() {
     setShowRequiredBoth(false);
   }
 
-  const validationMessage = showRequiredBoth
-    ? REQUIRED_BOTH_MESSAGE
+  const validationErrorCode = showRequiredBoth
+    ? ErrorCode.REQUIRED_LOGIN_ID_AND_PASSWORD
     : invalid.loginId
-      ? REQUIRED_LOGIN_ID_MESSAGE
+      ? ErrorCode.REQUIRED_LOGIN_ID
       : invalid.password
-        ? REQUIRED_PASSWORD_MESSAGE
+        ? ErrorCode.REQUIRED_PASSWORD
         : null;
-  const errorMessage = submitError ?? validationMessage;
+  const errorMessage =
+    submitError ?? (validationErrorCode ? ERROR_MESSAGES[validationErrorCode] : null);
   const errorDescribedBy = errorMessage ? ERROR_MESSAGE_ID : undefined;
 
   return (
