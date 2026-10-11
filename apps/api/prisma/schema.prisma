@@ -1,0 +1,30 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  // Jest(ts-jest)가 .js 확장자 import를 .ts 파일로 해석하지 못한다.
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+
+  @@map("user_status")
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  loginId      String     @unique @map("login_id")
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("users")
+}
