@@ -76,6 +76,14 @@ describe("LoginForm 렌더링", () => {
       "/forgot-password",
     );
   });
+
+  it("비밀번호 찾기 링크는 로그인 버튼 아래에 표시한다", () => {
+    render(<LoginForm />);
+
+    const button = screen.getByRole("button", { name: "로그인" });
+    const link = screen.getByRole("link", { name: "비밀번호 찾기" });
+    expect(button.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe("LoginForm 필수 입력 검증", () => {

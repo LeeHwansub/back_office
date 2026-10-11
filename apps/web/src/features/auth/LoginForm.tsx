@@ -122,21 +122,16 @@ export function LoginForm() {
         </p>
       )}
 
-      <div className="flex items-center justify-between text-sm">
-        <label className="flex items-center gap-2 text-gray-700">
-          <input
-            type="checkbox"
-            name="rememberMe"
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-            className="h-4 w-4 rounded border-gray-300"
-          />
-          로그인 상태 유지
-        </label>
-        <Link href="/forgot-password" className="text-blue-700 hover:underline">
-          비밀번호 찾기
-        </Link>
-      </div>
+      <label className="flex items-center gap-2 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          name="rememberMe"
+          checked={rememberMe}
+          onChange={(event) => setRememberMe(event.target.checked)}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        로그인 상태 유지
+      </label>
 
       <button
         type="submit"
@@ -145,6 +140,10 @@ export function LoginForm() {
       >
         {isSubmitting ? "로그인 중..." : "로그인"}
       </button>
+
+      <Link href="/forgot-password" className="self-start text-sm text-blue-700 underline">
+        비밀번호 찾기
+      </Link>
     </form>
   );
 }
