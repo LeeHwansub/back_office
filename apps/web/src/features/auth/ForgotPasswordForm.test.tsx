@@ -162,3 +162,50 @@ describe("ForgotPasswordForm 입력 검증", () => {
     expect(requestPasswordResetMock).not.toHaveBeenCalled();
   });
 });
+
+describe("ForgotPasswordForm 제출", () => {
+  async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("이메일"), "admin@example.com");
+  }
+
+  it("아이디와 이메일의 앞뒤 공백을 제거해 재설정 요청에 담는다", async () => {
+    requestPasswordResetMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "  admin  ");
+    await user.type(screen.getByLabelText("이메일"), "  admin@example.com  ");
+    await user.click(submitButton());
+
+    expect(requestPasswordResetMock).toHaveBeenCalledTimes(1);
+    expect(requestPasswordResetMock).toHaveBeenCalledWith({
+      loginId: "admin",
+      email: "admin@example.com",
+    });
+  });
+
+  it("요청 중에는 버튼에 요청 중...을 표시하고 비활성화한다", async () => {
+    requestPasswordResetMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    expect(screen.getByRole("button", { name: "요청 중..." })).toBeDisabled();
+  });
+
+  it("요청 중에는 다시 제출해도 재설정 요청을 한 번만 보낸다", async () => {
+    requestPasswordResetMock.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await fillValidForm(user);
+    await user.click(submitButton());
+    await user.click(screen.getByRole("button", { name: "요청 중..." }));
+    await user.type(screen.getByLabelText("이메일"), "{Enter}");
+
+    expect(requestPasswordResetMock).toHaveBeenCalledTimes(1);
+  });
+});

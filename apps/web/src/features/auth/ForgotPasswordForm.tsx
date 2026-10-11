@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ERROR_MESSAGES, ErrorCode } from "@/lib/error-messages";
+import { requestPasswordReset } from "./api";
 
 const inputClassName =
   "h-[43px] rounded border border-[#b3b3b3] px-3 text-sm text-gray-900 outline-none placeholder:text-[#999] focus:border-[#404040] focus:ring-2 focus:ring-[#404040]/20 aria-[invalid=true]:border-red-600";
@@ -34,16 +35,24 @@ export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(NO_FIELD_ERRORS);
   const [showRequiredBoth, setShowRequiredBoth] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
 
-    const nextErrors = validate(loginId.trim(), email.trim());
+    const trimmedLoginId = loginId.trim();
+    const trimmedEmail = email.trim();
+    const nextErrors = validate(trimmedLoginId, trimmedEmail);
     setFieldErrors(nextErrors);
     setShowRequiredBoth(
       nextErrors.loginId === ErrorCode.REQUIRED_LOGIN_ID &&
         nextErrors.email === ErrorCode.REQUIRED_EMAIL,
     );
+    if (nextErrors.loginId || nextErrors.email) return;
+
+    setIsSubmitting(true);
+    await requestPasswordReset({ loginId: trimmedLoginId, email: trimmedEmail });
   }
 
   function handleLoginIdChange(value: string) {
@@ -113,9 +122,10 @@ export function ForgotPasswordForm() {
 
       <button
         type="submit"
+        disabled={isSubmitting}
         className="h-[46px] rounded bg-[#404040] text-[15px] font-bold text-white transition-colors hover:bg-[#262626] disabled:cursor-not-allowed disabled:bg-[#8c8c8c]"
       >
-        재설정 링크 받기
+        {isSubmitting ? "요청 중..." : "재설정 링크 받기"}
       </button>
 
       <Link href="/login" className="self-start text-[13px] text-[#666] underline">
