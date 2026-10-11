@@ -15,6 +15,11 @@ export const ErrorCode = {
   REQUIRED_LOGIN_ID_AND_PASSWORD: "REQUIRED_LOGIN_ID_AND_PASSWORD",
   REQUIRED_LOGIN_ID: "REQUIRED_LOGIN_ID",
   REQUIRED_PASSWORD: "REQUIRED_PASSWORD",
+
+  REQUIRED_LOGIN_ID_AND_EMAIL: "REQUIRED_LOGIN_ID_AND_EMAIL",
+  REQUIRED_EMAIL: "REQUIRED_EMAIL",
+  INVALID_EMAIL_FORMAT: "INVALID_EMAIL_FORMAT",
+  PASSWORD_RESET_FAILED: "PASSWORD_RESET_FAILED",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -36,4 +41,9 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   REQUIRED_LOGIN_ID_AND_PASSWORD: "아이디와 비밀번호를 모두 입력해 주세요.",
   REQUIRED_LOGIN_ID: "아이디를 입력해 주세요.",
   REQUIRED_PASSWORD: "비밀번호를 입력해 주세요.",
+
+  REQUIRED_LOGIN_ID_AND_EMAIL: "아이디와 이메일을 모두 입력해 주세요.",
+  REQUIRED_EMAIL: "이메일을 입력해 주세요.",
+  INVALID_EMAIL_FORMAT: "올바른 이메일 주소를 입력해 주세요.",
+  PASSWORD_RESET_FAILED: "비밀번호 재설정 요청을 처리할 수 없습니다. 입력 정보를 확인해 주세요.",
 };
