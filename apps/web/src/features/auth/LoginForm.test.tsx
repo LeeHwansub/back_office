@@ -1,6 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { login } from "./api";
 import { LoginForm } from "./LoginForm";
+
+vi.mock("./api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./api")>();
+  return { ...actual, login: vi.fn() };
+});
+
+const loginMock = vi.mocked(login);
+
+beforeEach(() => {
+  loginMock.mockReset();
+});
 
 describe("LoginForm 렌더링", () => {
   it("아이디와 비밀번호 입력란을 표시한다", () => {
@@ -37,5 +50,98 @@ describe("LoginForm 렌더링", () => {
       "href",
       "/forgot-password",
     );
+  });
+});
+
+describe("LoginForm 필수 입력 검증", () => {
+  it("처음에는 검증 안내와 오류 표시가 없다", () => {
+    render(<LoginForm />);
+
+    expect(screen.queryByText(/입력해 주세요/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("아이디")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("비밀번호")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("아이디와 비밀번호가 모두 비어 있으면 공통 안내를 표시한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.getByText("아이디와 비밀번호를 모두 입력해 주세요.")).toBeInTheDocument();
+    expect(screen.getByLabelText("아이디")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("비밀번호")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("아이디만 비어 있으면 아이디 안내를 표시한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.getByLabelText("아이디")).toHaveAccessibleDescription("아이디를 입력해 주세요.");
+    expect(screen.getByLabelText("아이디")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("비밀번호")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("비밀번호만 비어 있으면 비밀번호 안내를 표시한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.getByLabelText("비밀번호")).toHaveAccessibleDescription(
+      "비밀번호를 입력해 주세요.",
+    );
+    expect(screen.getByLabelText("비밀번호")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("아이디")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("공백만 입력한 아이디는 입력하지 않은 것으로 처리한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("아이디"), "   ");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(screen.getByLabelText("아이디")).toHaveAccessibleDescription("아이디를 입력해 주세요.");
+  });
+
+  it("안내가 표시된 입력란을 다시 입력하면 해당 안내가 사라진다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+    await user.type(screen.getByLabelText("아이디"), "a");
+
+    expect(screen.queryByText("아이디를 입력해 주세요.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("아이디")).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("공통 안내는 어느 입력란이든 다시 입력하면 사라진다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+    await user.type(screen.getByLabelText("아이디"), "a");
+
+    expect(
+      screen.queryByText("아이디와 비밀번호를 모두 입력해 주세요."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("아이디")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText("비밀번호")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("검증에 실패하면 로그인 요청을 보내지 않는다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(loginMock).not.toHaveBeenCalled();
   });
 });

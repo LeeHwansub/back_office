@@ -1,11 +1,56 @@
+"use client";
+
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
 
 const inputClassName =
-  "h-11 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
+  "h-11 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-[invalid=true]:border-red-600";
+
+const REQUIRED_BOTH_MESSAGE = "아이디와 비밀번호를 모두 입력해 주세요.";
+const REQUIRED_LOGIN_ID_MESSAGE = "아이디를 입력해 주세요.";
+const REQUIRED_PASSWORD_MESSAGE = "비밀번호를 입력해 주세요.";
+
+type InvalidFields = { loginId: boolean; password: boolean };
+
+const NO_INVALID_FIELDS: InvalidFields = { loginId: false, password: false };
 
 export function LoginForm() {
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [invalid, setInvalid] = useState<InvalidFields>(NO_INVALID_FIELDS);
+  const [showRequiredBoth, setShowRequiredBoth] = useState(false);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextInvalid = { loginId: loginId.trim() === "", password: password === "" };
+    setInvalid(nextInvalid);
+    setShowRequiredBoth(nextInvalid.loginId && nextInvalid.password);
+  }
+
+  function handleLoginIdChange(value: string) {
+    setLoginId(value);
+    setInvalid((prev) => ({ ...prev, loginId: false }));
+    setShowRequiredBoth(false);
+  }
+
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    setInvalid((prev) => ({ ...prev, password: false }));
+    setShowRequiredBoth(false);
+  }
+
+  const showLoginIdMessage = invalid.loginId && !showRequiredBoth;
+  const showPasswordMessage = invalid.password && !showRequiredBoth;
+
   return (
-    <form noValidate className="flex flex-col gap-5">
+    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {showRequiredBoth && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {REQUIRED_BOTH_MESSAGE}
+        </p>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="loginId" className="text-sm font-medium text-gray-700">
           아이디
@@ -15,8 +60,17 @@ export function LoginForm() {
           name="loginId"
           type="text"
           autoComplete="username"
+          value={loginId}
+          onChange={(event) => handleLoginIdChange(event.target.value)}
+          aria-invalid={invalid.loginId || undefined}
+          aria-describedby={showLoginIdMessage ? "loginId-error" : undefined}
           className={inputClassName}
         />
+        {showLoginIdMessage && (
+          <p id="loginId-error" className="text-sm text-red-600">
+            {REQUIRED_LOGIN_ID_MESSAGE}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -28,8 +82,17 @@ export function LoginForm() {
           name="password"
           type="password"
           autoComplete="current-password"
+          value={password}
+          onChange={(event) => handlePasswordChange(event.target.value)}
+          aria-invalid={invalid.password || undefined}
+          aria-describedby={showPasswordMessage ? "password-error" : undefined}
           className={inputClassName}
         />
+        {showPasswordMessage && (
+          <p id="password-error" className="text-sm text-red-600">
+            {REQUIRED_PASSWORD_MESSAGE}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between text-sm">
