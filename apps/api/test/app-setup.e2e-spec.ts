@@ -47,6 +47,89 @@ class SetupTestController {
   }
 }
 
+describe('configureApp CORS (e2e)', () => {
+  const originalWebUrl = process.env.WEB_URL;
+  let app: INestApplication<App>;
+
+  async function createApp() {
+    const moduleFixture = await Test.createTestingModule({
+      controllers: [SetupTestController],
+    }).compile();
+    app = moduleFixture.createNestApplication();
+    configureApp(app);
+    await app.init();
+  }
+
+  afterEach(async () => {
+    await app.close();
+    if (originalWebUrl === undefined) {
+      delete process.env.WEB_URL;
+    } else {
+      process.env.WEB_URL = originalWebUrl;
+    }
+  });
+
+  it('WEB_URL이 없으면 http://localhost:3000의 사전 요청을 쿠키 포함으로 허용한다', async () => {
+    delete process.env.WEB_URL;
+    await createApp();
+
+    const response = await request(app.getHttpServer())
+      .options('/api/v1/setup-test/echo')
+      .set('Origin', 'http://localhost:3000')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3000',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('허용한 출처의 실제 요청에도 CORS 헤더를 붙인다', async () => {
+    delete process.env.WEB_URL;
+    await createApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/setup-test/ok')
+      .set('Origin', 'http://localhost:3000')
+      .expect(200);
+
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3000',
+    );
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('허용하지 않은 출처에는 CORS 허용 헤더를 붙이지 않는다', async () => {
+    delete process.env.WEB_URL;
+    await createApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/setup-test/ok')
+      .set('Origin', 'http://evil.example.com');
+
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('WEB_URL을 지정하면 해당 출처만 허용한다', async () => {
+    process.env.WEB_URL = 'https://admin.example.com';
+    await createApp();
+
+    const allowed = await request(app.getHttpServer())
+      .get('/api/v1/setup-test/ok')
+      .set('Origin', 'https://admin.example.com');
+    const blocked = await request(app.getHttpServer())
+      .get('/api/v1/setup-test/ok')
+      .set('Origin', 'http://localhost:3000');
+
+    expect(allowed.headers['access-control-allow-origin']).toBe(
+      'https://admin.example.com',
+    );
+    expect(blocked.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});
+
 describe('configureApp (e2e)', () => {
   let app: INestApplication<App>;
 
