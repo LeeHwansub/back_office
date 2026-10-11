@@ -89,6 +89,7 @@ export function LoginForm() {
           name="loginId"
           type="text"
           autoComplete="username"
+          placeholder="아이디를 입력하세요"
           value={loginId}
           onChange={(event) => handleLoginIdChange(event.target.value)}
           aria-invalid={invalid.loginId || undefined}
@@ -111,6 +112,7 @@ export function LoginForm() {
           name="password"
           type="password"
           autoComplete="current-password"
+          placeholder="비밀번호를 입력하세요"
           value={password}
           onChange={(event) => handlePasswordChange(event.target.value)}
           aria-invalid={invalid.password || undefined}

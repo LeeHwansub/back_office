@@ -30,6 +30,16 @@ describe("LoginForm 렌더링", () => {
     expect(screen.getByLabelText("비밀번호")).toBeInTheDocument();
   });
 
+  it("입력란에 입력 안내 문구를 표시한다", () => {
+    render(<LoginForm />);
+
+    expect(screen.getByLabelText("아이디")).toHaveAttribute("placeholder", "아이디를 입력하세요");
+    expect(screen.getByLabelText("비밀번호")).toHaveAttribute(
+      "placeholder",
+      "비밀번호를 입력하세요",
+    );
+  });
+
   it("비밀번호 입력값을 마스킹한다", () => {
     render(<LoginForm />);
 
