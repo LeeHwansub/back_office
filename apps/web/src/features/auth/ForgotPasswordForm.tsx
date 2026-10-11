@@ -1,13 +1,71 @@
+"use client";
+
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { ERROR_MESSAGES, ErrorCode } from "@/lib/error-messages";
 
 const inputClassName =
   "h-[43px] rounded border border-[#b3b3b3] px-3 text-sm text-gray-900 outline-none placeholder:text-[#999] focus:border-[#404040] focus:ring-2 focus:ring-[#404040]/20 aria-[invalid=true]:border-red-600";
 
 const labelClassName = "text-[13px] font-medium text-[#404040]";
 
+const ERROR_MESSAGE_ID = "forgot-password-error";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type FieldErrors = { loginId: ErrorCode | null; email: ErrorCode | null };
+
+const NO_FIELD_ERRORS: FieldErrors = { loginId: null, email: null };
+
+function validate(loginId: string, email: string): FieldErrors {
+  return {
+    loginId: loginId === "" ? ErrorCode.REQUIRED_LOGIN_ID : null,
+    email:
+      email === ""
+        ? ErrorCode.REQUIRED_EMAIL
+        : EMAIL_PATTERN.test(email)
+          ? null
+          : ErrorCode.INVALID_EMAIL_FORMAT,
+  };
+}
+
 export function ForgotPasswordForm() {
+  const [loginId, setLoginId] = useState("");
+  const [email, setEmail] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(NO_FIELD_ERRORS);
+  const [showRequiredBoth, setShowRequiredBoth] = useState(false);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextErrors = validate(loginId.trim(), email.trim());
+    setFieldErrors(nextErrors);
+    setShowRequiredBoth(
+      nextErrors.loginId === ErrorCode.REQUIRED_LOGIN_ID &&
+        nextErrors.email === ErrorCode.REQUIRED_EMAIL,
+    );
+  }
+
+  function handleLoginIdChange(value: string) {
+    setLoginId(value);
+    setFieldErrors((prev) => ({ ...prev, loginId: null }));
+    setShowRequiredBoth(false);
+  }
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    setFieldErrors((prev) => ({ ...prev, email: null }));
+    setShowRequiredBoth(false);
+  }
+
+  const errorCode = showRequiredBoth
+    ? ErrorCode.REQUIRED_LOGIN_ID_AND_EMAIL
+    : (fieldErrors.loginId ?? fieldErrors.email);
+  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
+  const errorDescribedBy = errorMessage ? ERROR_MESSAGE_ID : undefined;
+
   return (
-    <form noValidate className="flex flex-col gap-5">
+    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="loginId" className={labelClassName}>
           아이디
@@ -18,6 +76,10 @@ export function ForgotPasswordForm() {
           type="text"
           autoComplete="username"
           placeholder="아이디를 입력하세요"
+          value={loginId}
+          onChange={(event) => handleLoginIdChange(event.target.value)}
+          aria-invalid={fieldErrors.loginId ? true : undefined}
+          aria-describedby={fieldErrors.loginId ? errorDescribedBy : undefined}
           className={inputClassName}
         />
       </div>
@@ -32,9 +94,22 @@ export function ForgotPasswordForm() {
           type="email"
           autoComplete="email"
           placeholder="사내 이메일 주소를 입력하세요"
+          value={email}
+          onChange={(event) => handleEmailChange(event.target.value)}
+          aria-invalid={fieldErrors.email ? true : undefined}
+          aria-describedby={fieldErrors.email ? errorDescribedBy : undefined}
           className={inputClassName}
         />
       </div>
+
+      {errorMessage && (
+        <p
+          id={ERROR_MESSAGE_ID}
+          className="rounded border border-red-200 bg-red-50 p-3 text-[13px] font-medium text-red-700"
+        >
+          {errorMessage}
+        </p>
+      )}
 
       <button
         type="submit"
