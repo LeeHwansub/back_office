@@ -9,12 +9,17 @@ import {
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
+import { PasswordResetService } from './password-reset.service';
 
 export const SESSION_COOKIE_NAME = 'sid';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly passwordResetService: PasswordResetService,
+  ) {}
 
   @Post('login')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -35,6 +40,17 @@ export class AuthController {
       path: '/',
       // 로그인 유지를 선택하지 않으면 브라우저를 닫을 때 사라지는 쿠키로 둔다.
       ...(rememberMe && { expires: expiresAt }),
+    });
+  }
+
+  @Post('password-reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async requestPasswordReset(
+    @Body() body: PasswordResetRequestDto,
+  ): Promise<void> {
+    await this.passwordResetService.request({
+      loginId: body.loginId,
+      email: body.email,
     });
   }
 }
