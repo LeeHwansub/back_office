@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { login, LoginError } from "./api";
 import { getLoginErrorMessage } from "./login-error-messages";
@@ -17,6 +18,7 @@ type InvalidFields = { loginId: boolean; password: boolean };
 const NO_INVALID_FIELDS: InvalidFields = { loginId: false, password: false };
 
 export function LoginForm() {
+  const router = useRouter();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -43,7 +45,10 @@ export function LoginForm() {
       setSubmitError(error instanceof LoginError ? error.message : getLoginErrorMessage(null));
       setPassword("");
       setIsSubmitting(false);
+      return;
     }
+
+    router.replace("/dashboard");
   }
 
   function handleLoginIdChange(value: string) {

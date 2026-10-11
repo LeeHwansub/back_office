@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { login, LoginError } from "./api";
@@ -9,10 +9,17 @@ vi.mock("./api", async (importOriginal) => {
   return { ...actual, login: vi.fn() };
 });
 
+const { replaceMock } = vi.hoisted(() => ({ replaceMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceMock }),
+}));
+
 const loginMock = vi.mocked(login);
 
 beforeEach(() => {
   loginMock.mockReset();
+  replaceMock.mockReset();
 });
 
 describe("LoginForm 렌더링", () => {
@@ -271,5 +278,46 @@ describe("LoginForm 로그인 실패", () => {
     await user.click(screen.getByRole("button", { name: "로그인" }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("실패하면 대시보드로 이동하지 않는다", async () => {
+    loginMock.mockRejectedValue(new LoginError(401));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginForm 로그인 성공", () => {
+  async function submitValidForm(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+  }
+
+  it("성공하면 대시보드로 이동한다", async () => {
+    loginMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
+    expect(replaceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("성공 후 이동하는 동안 로그인 버튼을 비활성 상태로 유지한다", async () => {
+    loginMock.mockResolvedValue();
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+    await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+
+    expect(screen.getByRole("button", { name: "로그인 중..." })).toBeDisabled();
   });
 });
