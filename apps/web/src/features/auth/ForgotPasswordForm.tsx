@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ERROR_MESSAGES, ErrorCode } from "@/lib/error-messages";
-import { requestPasswordReset } from "./api";
+import { PasswordResetError, requestPasswordReset } from "./api";
 
 const inputClassName =
   "h-[43px] rounded border border-[#b3b3b3] px-3 text-sm text-gray-900 outline-none placeholder:text-[#999] focus:border-[#404040] focus:ring-2 focus:ring-[#404040]/20 aria-[invalid=true]:border-red-600";
@@ -36,11 +36,13 @@ export function ForgotPasswordForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(NO_FIELD_ERRORS);
   const [showRequiredBoth, setShowRequiredBoth] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) return;
 
+    setSubmitError(null);
     const trimmedLoginId = loginId.trim();
     const trimmedEmail = email.trim();
     const nextErrors = validate(trimmedLoginId, trimmedEmail);
@@ -52,7 +54,14 @@ export function ForgotPasswordForm() {
     if (nextErrors.loginId || nextErrors.email) return;
 
     setIsSubmitting(true);
-    await requestPasswordReset({ loginId: trimmedLoginId, email: trimmedEmail });
+    try {
+      await requestPasswordReset({ loginId: trimmedLoginId, email: trimmedEmail });
+    } catch (error) {
+      setSubmitError(
+        error instanceof PasswordResetError ? error.message : ERROR_MESSAGES[ErrorCode.SERVER_ERROR],
+      );
+      setIsSubmitting(false);
+    }
   }
 
   function handleLoginIdChange(value: string) {
@@ -70,8 +79,9 @@ export function ForgotPasswordForm() {
   const errorCode = showRequiredBoth
     ? ErrorCode.REQUIRED_LOGIN_ID_AND_EMAIL
     : (fieldErrors.loginId ?? fieldErrors.email);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
-  const errorDescribedBy = errorMessage ? ERROR_MESSAGE_ID : undefined;
+  const validationMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
+  const errorMessage = submitError ?? validationMessage;
+  const errorDescribedBy = validationMessage ? ERROR_MESSAGE_ID : undefined;
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -114,6 +124,7 @@ export function ForgotPasswordForm() {
       {errorMessage && (
         <p
           id={ERROR_MESSAGE_ID}
+          role={submitError ? "alert" : undefined}
           className="rounded border border-red-200 bg-red-50 p-3 text-[13px] font-medium text-red-700"
         >
           {errorMessage}

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { requestPasswordReset } from "./api";
+import { PasswordResetError, requestPasswordReset } from "./api";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 vi.mock("./api", async (importOriginal) => {
@@ -207,5 +207,89 @@ describe("ForgotPasswordForm 제출", () => {
     await user.type(screen.getByLabelText("이메일"), "{Enter}");
 
     expect(requestPasswordResetMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ForgotPasswordForm 요청 실패", () => {
+  async function submitValidForm(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("아이디"), "admin");
+    await user.type(screen.getByLabelText("이메일"), "admin@example.com");
+    await user.click(submitButton());
+  }
+
+  it("PasswordResetError의 안내 문구를 alert로 표시한다", async () => {
+    requestPasswordResetMock.mockRejectedValue(new PasswordResetError(404));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "비밀번호 재설정 요청을 처리할 수 없습니다. 입력 정보를 확인해 주세요.",
+    );
+  });
+
+  it("실패 안내는 이메일 입력란과 재설정 링크 받기 버튼 사이에 표시한다", async () => {
+    requestPasswordResetMock.mockRejectedValue(new PasswordResetError(404));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+
+    const alert = await screen.findByRole("alert");
+    const email = screen.getByLabelText("이메일");
+    expect(email.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      alert.compareDocumentPosition(submitButton()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("알 수 없는 오류는 내부 내용 대신 서버 오류 안내를 표시한다", async () => {
+    requestPasswordResetMock.mockRejectedValue(new Error("internal detail"));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("일시적인 서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    expect(alert).not.toHaveTextContent("internal detail");
+  });
+
+  it("실패하면 입력값을 유지한다", async () => {
+    requestPasswordResetMock.mockRejectedValue(new PasswordResetError(404));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+
+    expect(screen.getByLabelText("아이디")).toHaveValue("admin");
+    expect(screen.getByLabelText("이메일")).toHaveValue("admin@example.com");
+  });
+
+  it("실패하면 재설정 링크 받기 버튼을 다시 활성화한다", async () => {
+    requestPasswordResetMock.mockRejectedValue(new PasswordResetError(404));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it("다시 제출하면 이전 실패 안내를 지운다", async () => {
+    requestPasswordResetMock
+      .mockRejectedValueOnce(new PasswordResetError(404))
+      .mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await submitValidForm(user);
+    await screen.findByRole("alert");
+    await user.click(submitButton());
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
