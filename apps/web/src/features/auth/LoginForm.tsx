@@ -12,6 +12,7 @@ const inputClassName =
 const REQUIRED_BOTH_MESSAGE = "아이디와 비밀번호를 모두 입력해 주세요.";
 const REQUIRED_LOGIN_ID_MESSAGE = "아이디를 입력해 주세요.";
 const REQUIRED_PASSWORD_MESSAGE = "비밀번호를 입력해 주세요.";
+const ERROR_MESSAGE_ID = "login-error";
 
 type InvalidFields = { loginId: boolean; password: boolean };
 
@@ -63,23 +64,18 @@ export function LoginForm() {
     setShowRequiredBoth(false);
   }
 
-  const showLoginIdMessage = invalid.loginId && !showRequiredBoth;
-  const showPasswordMessage = invalid.password && !showRequiredBoth;
+  const validationMessage = showRequiredBoth
+    ? REQUIRED_BOTH_MESSAGE
+    : invalid.loginId
+      ? REQUIRED_LOGIN_ID_MESSAGE
+      : invalid.password
+        ? REQUIRED_PASSWORD_MESSAGE
+        : null;
+  const errorMessage = submitError ?? validationMessage;
+  const errorDescribedBy = errorMessage ? ERROR_MESSAGE_ID : undefined;
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {submitError && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {submitError}
-        </p>
-      )}
-
-      {showRequiredBoth && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {REQUIRED_BOTH_MESSAGE}
-        </p>
-      )}
-
       <div className="flex flex-col gap-1.5">
         <label htmlFor="loginId" className="text-sm font-medium text-gray-700">
           아이디
@@ -93,14 +89,9 @@ export function LoginForm() {
           value={loginId}
           onChange={(event) => handleLoginIdChange(event.target.value)}
           aria-invalid={invalid.loginId || undefined}
-          aria-describedby={showLoginIdMessage ? "loginId-error" : undefined}
+          aria-describedby={invalid.loginId ? errorDescribedBy : undefined}
           className={inputClassName}
         />
-        {showLoginIdMessage && (
-          <p id="loginId-error" className="text-sm text-red-600">
-            {REQUIRED_LOGIN_ID_MESSAGE}
-          </p>
-        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -116,15 +107,20 @@ export function LoginForm() {
           value={password}
           onChange={(event) => handlePasswordChange(event.target.value)}
           aria-invalid={invalid.password || undefined}
-          aria-describedby={showPasswordMessage ? "password-error" : undefined}
+          aria-describedby={invalid.password ? errorDescribedBy : undefined}
           className={inputClassName}
         />
-        {showPasswordMessage && (
-          <p id="password-error" className="text-sm text-red-600">
-            {REQUIRED_PASSWORD_MESSAGE}
-          </p>
-        )}
       </div>
+
+      {errorMessage && (
+        <p
+          id={ERROR_MESSAGE_ID}
+          role={submitError ? "alert" : undefined}
+          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {errorMessage}
+        </p>
+      )}
 
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-gray-700">

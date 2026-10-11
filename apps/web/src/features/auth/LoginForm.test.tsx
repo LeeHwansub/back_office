@@ -17,6 +17,14 @@ vi.mock("next/navigation", () => ({
 
 const loginMock = vi.mocked(login);
 
+function expectBetweenPasswordAndRememberMe(element: HTMLElement) {
+  const password = screen.getByLabelText("비밀번호");
+  const rememberMe = screen.getByRole("checkbox", { name: "로그인 상태 유지" });
+
+  expect(password.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(element.compareDocumentPosition(rememberMe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+}
+
 beforeEach(() => {
   loginMock.mockReset();
   replaceMock.mockReset();
@@ -153,6 +161,27 @@ describe("LoginForm 필수 입력 검증", () => {
     expect(screen.getByLabelText("비밀번호")).toHaveAttribute("aria-invalid", "true");
   });
 
+  it("공통 안내는 비밀번호 입력란과 로그인 상태 유지 사이에 표시한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expectBetweenPasswordAndRememberMe(
+      screen.getByText("아이디와 비밀번호를 모두 입력해 주세요."),
+    );
+  });
+
+  it("아이디 안내도 같은 오류 영역에 표시한다", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("비밀번호"), "secret");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expectBetweenPasswordAndRememberMe(screen.getByText("아이디를 입력해 주세요."));
+  });
+
   it("검증에 실패하면 로그인 요청을 보내지 않는다", async () => {
     const user = userEvent.setup();
     render(<LoginForm />);
@@ -238,6 +267,16 @@ describe("LoginForm 로그인 실패", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "아이디 또는 비밀번호를 확인해 주세요.",
     );
+  });
+
+  it("실패 안내는 비밀번호 입력란과 로그인 상태 유지 사이에 표시한다", async () => {
+    loginMock.mockRejectedValue(new LoginError(401));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await submitValidForm(user);
+
+    expectBetweenPasswordAndRememberMe(await screen.findByRole("alert"));
   });
 
   it("알 수 없는 오류는 내부 내용 대신 로그인 서버 오류 안내를 표시한다", async () => {
