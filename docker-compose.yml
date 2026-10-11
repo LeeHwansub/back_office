@@ -22,6 +22,7 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
+      WEB_URL: http://localhost:3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/back_office
       TEST_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/back_office_test
     volumes:
