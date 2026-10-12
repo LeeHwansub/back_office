@@ -9,7 +9,7 @@
 ```text
 src/
   app.setup.ts     전역 설정: /api/v1 접두사, CORS(WEB_URL, credentials 허용), 오류 필터, 입력 검증
-  auth/            로그인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰)
+  auth/            로그인, 세션 확인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰, 세션 가드)
   mail/            비밀번호 재설정 메일 발송기 (Resend 또는 서버 로그)
   seed/            환경 변수 기반 시드 관리자 생성
   prisma/          PrismaService
@@ -47,6 +47,15 @@ test/              e2e 테스트
 | 비밀번호는 맞지만 그 밖의 비활성 계정 | 403 `ACCOUNT_DISABLED` |
 
 없는 아이디일 때도 가짜 해시 검증을 수행해 응답 시간으로 계정 존재 여부가 드러나지 않게 합니다.
+
+### `GET /auth/me`
+
+쿠키 `sid`의 세션으로 현재 로그인한 계정을 조회합니다. 다른 보호 API도 같은 세션 가드(`SessionGuard`)를 사용합니다.
+
+- 성공: 200, `{ id, loginId, displayName, email, role: { code, name } | null, permissions: string[] }`
+  - 비밀번호 해시는 포함하지 않습니다. `permissions`는 역할에 부여된 권한 코드를 정렬한 목록입니다.
+- 쿠키가 없거나, 저장되지 않은 토큰이거나, 세션이 만료됐거나, 계정이 ACTIVE가 아니면 401 `UNAUTHORIZED`
+  - 만료된 세션은 이때 삭제합니다.
 
 ### `POST /auth/password-reset`
 

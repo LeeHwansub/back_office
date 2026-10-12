@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -12,8 +14,9 @@ import { LoginDto } from './dto/login.dto';
 import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
 import { PasswordResetService } from './password-reset.service';
-
-export const SESSION_COOKIE_NAME = 'sid';
+import { SESSION_COOKIE_NAME } from './session-cookie';
+import { CurrentUser, SessionGuard } from './session.guard';
+import type { AuthenticatedUser } from './session.service';
 
 @Controller('auth')
 export class AuthController {
@@ -42,6 +45,12 @@ export class AuthController {
       // 로그인 유지를 선택하지 않으면 브라우저를 닫을 때 사라지는 쿠키로 둔다.
       ...(rememberMe && { expires: expiresAt }),
     });
+  }
+
+  @Get('me')
+  @UseGuards(SessionGuard)
+  me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
+    return user;
   }
 
   @Post('password-reset')
