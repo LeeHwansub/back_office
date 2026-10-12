@@ -72,6 +72,13 @@ export class SessionService {
         .sort(),
     };
   }
+
+  async revoke(token: string | null): Promise<void> {
+    if (!token) return;
+    await this.prisma.adminSession.deleteMany({
+      where: { tokenHash: hashSessionToken(token) },
+    });
+  }
 }
 
 function unauthorized(): AppException {
