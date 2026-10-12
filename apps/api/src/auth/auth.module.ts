@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PasswordHasher } from './password-hasher';
 import { PasswordResetService } from './password-reset.service';
+import { PermissionGuard } from './permission.guard';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
 
@@ -16,7 +17,8 @@ import { SessionService } from './session.service';
     PasswordResetService,
     SessionService,
     SessionGuard,
+    PermissionGuard,
   ],
-  exports: [PasswordHasher, SessionService, SessionGuard],
+  exports: [PasswordHasher, SessionService, SessionGuard, PermissionGuard],
 })
 export class AuthModule {}

@@ -9,7 +9,8 @@
 ```text
 src/
   app.setup.ts     전역 설정: /api/v1 접두사, CORS(WEB_URL, credentials 허용), 오류 필터, 입력 검증
-  auth/            로그인, 세션 확인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰, 세션 가드)
+  auth/            로그인, 세션 확인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰, 세션·권한 가드, 역할 순위)
+  users/           회원 목록 조회·발급
   mail/            비밀번호 재설정 메일 발송기 (Resend 또는 서버 로그)
   seed/            환경 변수 기반 시드 관리자 생성
   prisma/          PrismaService
@@ -21,7 +22,7 @@ prisma/
 test/              e2e 테스트
 ```
 
-`users`, `roles`, `dashboard`, `audit-logs`, `integrations`, `systems` 폴더는 이후 기능을 위한 자리이며 아직 비어 있습니다.
+`roles`, `dashboard`, `audit-logs`, `integrations`, `systems` 폴더는 이후 기능을 위한 자리이며 아직 비어 있습니다.
 
 ## API
 
@@ -88,6 +89,43 @@ test/              e2e 테스트
   - 그 계정의 다른 미사용 토큰과 모든 로그인 세션을 지웁니다.
 - 없는 토큰, 만료·사용된 토큰, 재설정할 수 없는 상태의 계정: 400 `INVALID_RESET_TOKEN`
 
+### 역할과 권한
+
+- 역할 순위: `ROOT`(최고 관리자) > `MANAGER`(중간 관리자) > `ADMIN`(일반 관리자). 계정당 역할은 하나입니다.
+- 자기보다 **아래** 역할만 다룰 수 있습니다. 같은 역할끼리, 하위가 상위를 다룰 수 없습니다. `ROOT`는 시드 계정 하나만 가집니다.
+- 회원 API는 로그인(세션)과 아래 권한 코드가 필요합니다. 로그인하지 않았으면 401 `UNAUTHORIZED`, 권한이 없으면 403 `FORBIDDEN`입니다.
+
+| 권한 | 내용 | 기본 부여 |
+|---|---|---|
+| `USER_READ` | 회원 목록 조회 | ROOT, MANAGER, ADMIN |
+| `USER_CREATE` | 회원 발급 | ROOT, MANAGER |
+| `USER_UPDATE` | 회원 상태·역할 변경 | ROOT, MANAGER |
+| `ROLE_PERMISSION_UPDATE` | 역할 권한 편집 | ROOT, MANAGER |
+
+### `GET /users` (`USER_READ`)
+
+- 200, 생성 순서대로 `[{ id, loginId, displayName, email, status, role: { code, name } | null, lastLoginAt, createdAt }]`
+- 비밀번호 해시는 포함하지 않습니다.
+
+### `POST /users` (`USER_CREATE`)
+
+| 필드 | 규칙 |
+|---|---|
+| `loginId` | 필수, 50자 이하 |
+| `password` | 필수, 8~200자, 영문과 숫자 각각 1개 이상 |
+| `displayName` | 필수, 100자 이하 |
+| `email` | 필수, 이메일 형식, 255자 이하 |
+| `roleCode` | 필수, 요청한 계정보다 아래 역할 |
+
+- 성공: 201, `GET /users`의 항목과 같은 형식. 상태는 ACTIVE, 역할 부여자(`assigned_by`)는 요청한 계정입니다.
+
+| 상황 | 응답 |
+|---|---|
+| 없는 역할 코드, 입력 형식 오류 | 400 `BAD_REQUEST` |
+| 자기와 같거나 상위인 역할로 발급 | 403 `FORBIDDEN` |
+| 이미 있는 아이디 | 409 `DUPLICATE_LOGIN_ID` |
+| 이미 있는 이메일 | 409 `DUPLICATE_EMAIL` |
+
 ## 오류 응답
 
 오류 응답 본문은 `{ "code": "<오류 코드>" }` 하나만 담습니다. 내부 오류 내용은 클라이언트에 보내지 않습니다.
@@ -98,7 +136,7 @@ test/              e2e 테스트
 | `UNAUTHORIZED`, `INVALID_CREDENTIALS` | 401 |
 | `FORBIDDEN`, `ACCOUNT_DISABLED`, `ACCOUNT_LOCKED` | 403 |
 | `NOT_FOUND` | 404 |
-| `CONFLICT` | 409 |
+| `CONFLICT`, `DUPLICATE_LOGIN_ID`, `DUPLICATE_EMAIL` | 409 |
 | `UNPROCESSABLE` | 422 |
 | `TOO_MANY_REQUESTS` | 429 |
 | `SERVER_ERROR` | 500 |
@@ -110,8 +148,12 @@ test/              e2e 테스트
 | `admin_users` | 관리자 계정. 아이디(`username`)·이메일 고유, 비밀번호 해시(argon2), 상태 ACTIVE / INACTIVE / LOCKED |
 | `admin_sessions` | 로그인 세션. 토큰 해시, 만료 시각 |
 | `password_reset_tokens` | 비밀번호 재설정 토큰. 토큰 해시, 만료 시각, 사용 시각 |
+| `roles` | 역할. 코드 고유 (ROOT, MANAGER, ADMIN은 마이그레이션이 등록) |
+| `permissions` | 권한. 코드 고유 (기본 권한 4개는 마이그레이션이 등록) |
+| `role_permissions` | 역할별 권한 |
+| `user_roles` | 계정별 역할. 부여자(`assigned_by`), 부여 일시 |
 
-세션과 재설정 토큰은 계정이 삭제되면 함께 삭제됩니다.
+세션, 재설정 토큰, 계정별 역할은 계정이 삭제되면 함께 삭제됩니다. 계정에 부여된 역할은 삭제할 수 없습니다.
 
 ```bash
 npm run prisma:generate            # Prisma Client 생성
@@ -134,5 +176,5 @@ npx eslint "{src,test}/**/*.ts" prisma.config.ts
 npx nest build
 ```
 
-- e2e 테스트는 `TEST_DATABASE_URL`(`back_office_test`)을 사용합니다. 시작할 때 마이그레이션을 적용하고, 테스트마다 모든 테이블을 비웁니다.
+- e2e 테스트는 `TEST_DATABASE_URL`(`back_office_test`)을 사용합니다. 시작할 때 마이그레이션을 적용하고, 테스트마다 테이블을 비웁니다. 마이그레이션이 넣는 기준 데이터(`roles`, `permissions`, `role_permissions`)는 비우지 않습니다.
 - 테스트 DB를 함께 쓰므로 e2e 테스트는 순서대로 하나씩 실행합니다(`maxWorkers: 1`).
