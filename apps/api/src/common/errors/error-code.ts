@@ -11,6 +11,8 @@ export const ErrorCode = {
   ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
   INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
+  DUPLICATE_LOGIN_ID: 'DUPLICATE_LOGIN_ID',
+  DUPLICATE_EMAIL: 'DUPLICATE_EMAIL',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

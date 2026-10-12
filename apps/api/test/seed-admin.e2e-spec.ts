@@ -83,4 +83,82 @@ describe('seedAdmin (e2e)', () => {
     ).resolves.toBe('skipped');
     await expect(prisma.adminUser.count()).resolves.toBe(1);
   });
+
+  describe('ROOT 역할', () => {
+    async function rootHolders(): Promise<string[]> {
+      const rows = await prisma.userRole.findMany({
+        where: { role: { code: 'ROOT' } },
+        select: { user: { select: { loginId: true } } },
+      });
+      return rows.map(({ user }) => user.loginId);
+    }
+
+    async function createUser(loginId: string): Promise<string> {
+      const user = await prisma.adminUser.create({
+        data: {
+          loginId,
+          email: `${loginId}@example.com`,
+          passwordHash: 'hashed-password',
+          displayName: loginId,
+        },
+      });
+      return user.id;
+    }
+
+    it('계정을 만들 때 ROOT 역할을 함께 부여한다', async () => {
+      await seedAdmin(prisma, hasher, CONFIG);
+
+      await expect(rootHolders()).resolves.toEqual(['admin']);
+      const userRole = await prisma.userRole.findFirstOrThrow({
+        where: { role: { code: 'ROOT' } },
+      });
+      expect(userRole.assignedBy).toBeNull();
+    });
+
+    it('같은 아이디 계정이 있고 ROOT 계정이 없으면 ROOT를 부여하고 root-assigned를 반환한다', async () => {
+      await createUser('admin');
+
+      await expect(seedAdmin(prisma, hasher, CONFIG)).resolves.toBe(
+        'root-assigned',
+      );
+
+      await expect(rootHolders()).resolves.toEqual(['admin']);
+      await expect(prisma.adminUser.count()).resolves.toBe(1);
+    });
+
+    it('이미 ROOT인 시드 계정에는 다시 부여하지 않고 skipped를 반환한다', async () => {
+      await seedAdmin(prisma, hasher, CONFIG);
+
+      await expect(seedAdmin(prisma, hasher, CONFIG)).resolves.toBe('skipped');
+
+      await expect(prisma.userRole.count()).resolves.toBe(1);
+    });
+
+    it('다른 계정이 이미 ROOT이면 같은 아이디 계정에 ROOT를 부여하지 않는다', async () => {
+      const otherId = await createUser('other-root');
+      const root = await prisma.role.findUniqueOrThrow({
+        where: { code: 'ROOT' },
+      });
+      await prisma.userRole.create({
+        data: { userId: otherId, roleId: root.id },
+      });
+      await createUser('admin');
+
+      await expect(seedAdmin(prisma, hasher, CONFIG)).resolves.toBe('skipped');
+
+      await expect(rootHolders()).resolves.toEqual(['other-root']);
+    });
+
+    it('이메일만 같은 다른 아이디 계정에는 ROOT를 부여하지 않는다', async () => {
+      await createUser('someone');
+      await prisma.adminUser.update({
+        where: { loginId: 'someone' },
+        data: { email: CONFIG.email },
+      });
+
+      await expect(seedAdmin(prisma, hasher, CONFIG)).resolves.toBe('skipped');
+
+      await expect(rootHolders()).resolves.toEqual([]);
+    });
+  });
 });

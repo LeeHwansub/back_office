@@ -1,25 +1,34 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
 import { PasswordResetService } from './password-reset.service';
-
-export const SESSION_COOKIE_NAME = 'sid';
+import {
+  readSessionToken,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from './session-cookie';
+import { CurrentUser, SessionGuard } from './session.guard';
+import { type AuthenticatedUser, SessionService } from './session.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly passwordResetService: PasswordResetService,
+    private readonly sessionService: SessionService,
   ) {}
 
   @Post('login')
@@ -35,13 +44,26 @@ export class AuthController {
     });
 
     response.cookie(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
+      ...sessionCookieOptions(),
       // 로그인 유지를 선택하지 않으면 브라우저를 닫을 때 사라지는 쿠키로 둔다.
       ...(rememberMe && { expires: expiresAt }),
     });
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.sessionService.revoke(readSessionToken(request.headers.cookie));
+    response.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions());
+  }
+
+  @Get('me')
+  @UseGuards(SessionGuard)
+  me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
+    return user;
   }
 
   @Post('password-reset')
