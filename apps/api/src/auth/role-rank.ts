@@ -11,6 +11,10 @@ function rankOf(roleCode: string | null): number | undefined {
   return roleCode === null ? NO_ROLE_RANK : ROLE_RANK[roleCode];
 }
 
+export function compareRoleRank(a: string, b: string): number {
+  return (ROLE_RANK[a] ?? NO_ROLE_RANK) - (ROLE_RANK[b] ?? NO_ROLE_RANK) || 0;
+}
+
 // 행위자가 대상 역할보다 엄격하게 상위일 때만 true다.
 export function outranks(
   actorRoleCode: string | null,

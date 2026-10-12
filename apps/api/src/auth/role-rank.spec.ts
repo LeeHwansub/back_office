@@ -1,4 +1,12 @@
-import { outranks } from './role-rank';
+import { compareRoleRank, outranks } from './role-rank';
+
+describe('compareRoleRank', () => {
+  it('상위 역할부터 정렬하고 알 수 없는 역할은 맨 뒤에 둔다', () => {
+    expect(
+      ['ADMIN', 'UNKNOWN', 'ROOT', 'MANAGER'].sort(compareRoleRank),
+    ).toEqual(['ROOT', 'MANAGER', 'ADMIN', 'UNKNOWN']);
+  });
+});
 
 describe('outranks', () => {
   it.each([

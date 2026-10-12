@@ -11,6 +11,7 @@ src/
   app.setup.ts     전역 설정: /api/v1 접두사, CORS(WEB_URL, credentials 허용), 오류 필터, 입력 검증
   auth/            로그인, 세션 확인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰, 세션·권한 가드, 역할 순위)
   users/           회원 목록 조회·발급, 상태·역할 변경
+  roles/           역할·권한 조회, 역할별 권한 편집
   mail/            비밀번호 재설정 메일 발송기 (Resend 또는 서버 로그)
   seed/            환경 변수 기반 시드 관리자 생성
   prisma/          PrismaService
@@ -22,7 +23,7 @@ prisma/
 test/              e2e 테스트
 ```
 
-`roles`, `dashboard`, `audit-logs`, `integrations`, `systems` 폴더는 이후 기능을 위한 자리이며 아직 비어 있습니다.
+`dashboard`, `audit-logs`, `integrations`, `systems` 폴더는 이후 기능을 위한 자리이며 아직 비어 있습니다.
 
 ## API
 
@@ -145,6 +146,28 @@ test/              e2e 테스트
 | `id`가 UUID 형식이 아님, 입력 형식 오류, 없는 역할 코드 | 400 `BAD_REQUEST` |
 | 자기 자신, 같거나 상위 역할의 계정, 같거나 상위 역할로 변경 | 403 `FORBIDDEN` |
 | 없는 계정 | 404 `NOT_FOUND` |
+
+### `GET /roles` (로그인만 필요)
+
+- 200, 순위 순서(ROOT → MANAGER → ADMIN)로 `[{ code, name, description, permissions: string[] }]`
+
+### `GET /permissions` (로그인만 필요)
+
+- 200, 코드 순으로 `[{ code, name, description }]`
+
+### `PUT /roles/:code/permissions` (`ROLE_PERMISSION_UPDATE`)
+
+- 본문: `{ "permissionCodes": ["USER_READ", ...] }`. 역할의 권한을 보낸 목록으로 바꿉니다(빈 목록이면 모두 제거).
+- 자기보다 하위 역할만 편집할 수 있습니다.
+- 자기에게 없는 권한은 새로 줄 수 없습니다. 이미 그 역할에 있던 권한은 유지하거나 뺄 수 있습니다.
+- 바뀐 권한은 그 역할 계정들의 다음 요청부터 바로 적용됩니다.
+- 성공: 200, `GET /roles`의 항목과 같은 형식
+
+| 상황 | 응답 |
+|---|---|
+| 목록 누락·형식 오류, 중복 코드, 없는 권한 코드 | 400 `BAD_REQUEST` |
+| 같거나 상위 역할, 자기에게 없는 권한을 새로 부여 | 403 `FORBIDDEN` |
+| 없는 역할 | 404 `NOT_FOUND` |
 
 ## 오류 응답
 
