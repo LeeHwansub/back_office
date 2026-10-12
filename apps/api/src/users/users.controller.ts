@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { PermissionGuard, RequirePermission } from '../auth/permission.guard';
 import { CurrentUser, SessionGuard } from '../auth/session.guard';
 import type { AuthenticatedUser } from '../auth/session.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserSummary, UsersService } from './users.service';
 
 @Controller('users')
@@ -23,5 +34,25 @@ export class UsersController {
     @Body() body: CreateUserDto,
   ): Promise<UserSummary> {
     return this.usersService.create(actor, body);
+  }
+
+  @Patch(':id/status')
+  @RequirePermission('USER_UPDATE')
+  updateStatus(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateUserStatusDto,
+  ): Promise<UserSummary> {
+    return this.usersService.updateStatus(actor, id, body.status);
+  }
+
+  @Patch(':id/role')
+  @RequirePermission('USER_UPDATE')
+  updateRole(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateUserRoleDto,
+  ): Promise<UserSummary> {
+    return this.usersService.updateRole(actor, id, body.roleCode);
   }
 }

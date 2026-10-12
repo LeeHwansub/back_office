@@ -10,7 +10,7 @@
 src/
   app.setup.ts     전역 설정: /api/v1 접두사, CORS(WEB_URL, credentials 허용), 오류 필터, 입력 검증
   auth/            로그인, 세션 확인, 비밀번호 재설정 요청·확정 (컨트롤러, 서비스, DTO, 비밀번호 해시, 토큰, 세션·권한 가드, 역할 순위)
-  users/           회원 목록 조회·발급
+  users/           회원 목록 조회·발급, 상태·역할 변경
   mail/            비밀번호 재설정 메일 발송기 (Resend 또는 서버 로그)
   seed/            환경 변수 기반 시드 관리자 생성
   prisma/          PrismaService
@@ -125,6 +125,26 @@ test/              e2e 테스트
 | 자기와 같거나 상위인 역할로 발급 | 403 `FORBIDDEN` |
 | 이미 있는 아이디 | 409 `DUPLICATE_LOGIN_ID` |
 | 이미 있는 이메일 | 409 `DUPLICATE_EMAIL` |
+
+### `PATCH /users/:id/status` (`USER_UPDATE`)
+
+- 본문: `{ "status": "ACTIVE" | "INACTIVE" }`. `LOCKED`는 지정할 수 없고, `ACTIVE`로 바꾸면 잠금도 풀립니다.
+- `INACTIVE`로 바꾸면 그 계정의 로그인 세션을 모두 삭제합니다.
+- 성공: 200, `GET /users`의 항목과 같은 형식
+
+### `PATCH /users/:id/role` (`USER_UPDATE`)
+
+- 본문: `{ "roleCode": "<역할 코드>" }`. 기존 역할을 지우고 새 역할 하나를 부여하며, 부여자는 요청한 계정입니다.
+- 바뀐 역할의 권한은 대상 계정의 다음 요청부터 바로 적용됩니다.
+- 성공: 200, `GET /users`의 항목과 같은 형식
+
+두 API 공통:
+
+| 상황 | 응답 |
+|---|---|
+| `id`가 UUID 형식이 아님, 입력 형식 오류, 없는 역할 코드 | 400 `BAD_REQUEST` |
+| 자기 자신, 같거나 상위 역할의 계정, 같거나 상위 역할로 변경 | 403 `FORBIDDEN` |
+| 없는 계정 | 404 `NOT_FOUND` |
 
 ## 오류 응답
 
